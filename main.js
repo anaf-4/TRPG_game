@@ -53,3 +53,5 @@ ipcMain.handle('net:start-solo', (_e, payload) => net.startSolo(payload));
 ipcMain.handle('net:send-action', (_e, payload) => net.sendAction(payload));
 ipcMain.handle('net:leave-room', () => net.leaveRoom());
 ipcMain.handle('net:start-game', () => net.startGame());
+ipcMain.handle('net:kick-player', (_e, payload) => net.kickPlayer(payload.targetId));
+ipcMain.handle('net:rename-room', (_e, payload) => net.renameRoom(payload.title));

@@ -82,4 +82,18 @@ const LOCATION_INFO = {
   '용의 둥지': '드래곤 킹이 잠들어 있는 최종 결전지입니다. (구현 예정)',
 };
 
-window.GAME_DATA = { JOBS, TOWNS, LOCATION_INFO, findJobById };
+function getJobTier(id) {
+  if (!id) return null;
+  for (const tier of Object.keys(JOBS)) {
+    if (JOBS[tier].some((j) => j.id === id)) return tier;
+  }
+  return null;
+}
+
+const GAME_DATA = { JOBS, TOWNS, LOCATION_INFO, findJobById, getJobTier };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = GAME_DATA;
+} else {
+  window.GAME_DATA = GAME_DATA;
+}

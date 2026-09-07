@@ -45,6 +45,17 @@ class NetManager {
       this.emit('net:players-update', msg.players);
     } else if (msg.type === 'room_closed') {
       this.emit('net:disconnected', { reason: msg.reason || '방이 종료되었습니다.' });
+      // removeAllListeners() 전에 소켓이 이미 닫히는 중이라, 뒤이어 오는 원격 close
+      // 이벤트가 위 메시지를 덮어쓰는 일반 "연결 끊김" 알림을 한 번 더 emit하지 않도록 정리한다.
+      this._closeRelay();
+      this._resetLocalState();
+    } else if (msg.type === 'kicked') {
+      this.emit('net:disconnected', { reason: msg.reason || '호스트가 당신을 강퇴했습니다.', kicked: true });
+      this._closeRelay();
+      this._resetLocalState();
+    } else if (msg.type === 'room_renamed') {
+      this.title = msg.title;
+      this.emit('net:game-event', msg);
     } else {
       this.emit('net:game-event', msg);
     }
@@ -206,6 +217,20 @@ class NetManager {
       this.emit('net:game-event', { ...action, senderId: this.localId });
     } else if (this.relayWs && this.relayWs.readyState === WebSocket.OPEN) {
       this.relayWs.send(JSON.stringify({ type: 'action', payload: action }));
+    }
+    return { ok: true };
+  }
+
+  async kickPlayer(targetId) {
+    if (this.role === 'host' && this.relayWs && this.relayWs.readyState === WebSocket.OPEN) {
+      this.relayWs.send(JSON.stringify({ type: 'kick_player', targetId }));
+    }
+    return { ok: true };
+  }
+
+  async renameRoom(title) {
+    if (this.role === 'host' && this.relayWs && this.relayWs.readyState === WebSocket.OPEN) {
+      this.relayWs.send(JSON.stringify({ type: 'rename_room', title }));
     }
     return { ok: true };
   }

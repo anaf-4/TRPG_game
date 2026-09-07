@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('gameNet', {
   sendAction: (payload) => ipcRenderer.invoke('net:send-action', payload),
   leaveRoom: () => ipcRenderer.invoke('net:leave-room'),
   startGame: () => ipcRenderer.invoke('net:start-game'),
+  kickPlayer: (targetId) => ipcRenderer.invoke('net:kick-player', { targetId }),
+  renameRoom: (title) => ipcRenderer.invoke('net:rename-room', { title }),
   on: (channel, callback) => {
     if (!LISTENABLE_CHANNELS.includes(channel)) return () => {};
     const handler = (_event, payload) => callback(payload);

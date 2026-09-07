@@ -29,12 +29,12 @@
     <p id="main-error" class="error-text hidden"></p>
 
     <details class="server-settings">
-      <summary>중계 서버 설정 (멀티플레이 시 필요)</summary>
+      <summary>중계 서버 설정 (기본값 사용 중 · 보통 안 건드려도 됨)</summary>
       <label class="field">
         <span>서버 주소 (wss://... 또는 ws://...)</span>
-        <input id="input-server-url" type="text" placeholder="ws://localhost:8080" />
+        <input id="input-server-url" type="text" placeholder="wss://trpg-game-znj4.onrender.com" />
       </label>
-      <p class="hint">친구와 인터넷으로 함께하려면, 배포한 중계 서버 주소를 참여하는 모두가 동일하게 입력해야 합니다.</p>
+      <p class="hint">기본으로 공용 중계 서버에 자동 접속됩니다. 직접 배포한 서버를 쓰고 싶을 때만 주소를 바꿔주세요.</p>
     </details>
   </div>
 </section>
@@ -95,10 +95,52 @@
   </div>
 </div>
 
+<!-- NPC 대화 모달 -->
+<div id="modal-dialogue" class="modal hidden">
+  <div class="modal-box dialogue-box">
+    <h3 id="dialogue-npc-name"></h3>
+    <p id="dialogue-text" class="dialogue-text"></p>
+    <div id="dialogue-options" class="dialogue-options"></div>
+    <button id="btn-dialogue-close" class="btn btn-link">닫기</button>
+  </div>
+</div>
+
+<!-- 게임 중 메뉴(방 관리) — 마을/전투 화면에서도 강퇴/방제목변경/나가기에 접근 -->
+<div id="modal-ingame-menu" class="modal hidden">
+  <div class="modal-box">
+    <h3>방 관리</h3>
+
+    <div class="lobby-title-row">
+      <span id="ingame-menu-title" class="ingame-menu-title"></span>
+      <button id="btn-ingame-rename" class="btn btn-link btn-small hidden">제목 변경</button>
+    </div>
+    <div id="ingame-rename-row" class="rename-row hidden">
+      <input id="input-ingame-rename" type="text" maxlength="40" />
+      <button id="btn-ingame-rename-confirm" class="btn btn-primary btn-small">변경</button>
+      <button id="btn-ingame-rename-cancel" class="btn btn-small">취소</button>
+    </div>
+
+    <ul id="ingame-menu-players" class="player-list"></ul>
+
+    <div class="modal-buttons">
+      <button id="btn-ingame-menu-close" class="btn">닫기</button>
+      <button id="btn-ingame-menu-leave" class="btn btn-danger">게임 나가기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 로비 -->
 <section id="screen-lobby" class="screen hidden">
   <div class="panel">
-    <h2 id="lobby-title">방</h2>
+    <div class="lobby-title-row">
+      <h2 id="lobby-title">방</h2>
+      <button id="btn-rename-room" class="btn btn-link btn-small hidden">제목 변경</button>
+    </div>
+    <div id="rename-room-row" class="rename-row hidden">
+      <input id="input-rename-room" type="text" maxlength="40" />
+      <button id="btn-rename-confirm" class="btn btn-primary btn-small">변경</button>
+      <button id="btn-rename-cancel" class="btn btn-small">취소</button>
+    </div>
     <ul id="lobby-players" class="player-list"></ul>
     <div id="lobby-host-controls">
       <button id="btn-start-game" class="btn btn-primary">게임 시작</button>
@@ -124,10 +166,21 @@
     <div class="town-header">
       <h2 id="town-name">마을A</h2>
       <span id="town-subtitle" class="town-subtitle"></span>
+      <button id="btn-open-ingame-menu-town" class="btn btn-link btn-small ingame-menu-trigger">☰ 방 관리</button>
     </div>
     <p id="town-description" class="town-desc"></p>
 
     <div class="party-bar" id="party-bar"></div>
+
+    <div id="tier-up-banner" class="tier-up-banner hidden">
+      <span id="tier-up-text"></span>
+      <button id="btn-tier-up-confirm" class="btn btn-primary btn-small">전직하기</button>
+    </div>
+
+    <div id="travel-banner" class="tier-up-banner hidden">
+      <span id="travel-text"></span>
+      <button id="btn-travel-confirm" class="btn btn-primary btn-small">다음 마을로 떠나기</button>
+    </div>
 
     <div class="town-body">
       <div id="location-grid" class="location-grid"></div>
@@ -140,7 +193,66 @@
   </div>
 </section>
 
+<!-- 전투 -->
+<section id="screen-combat" class="screen hidden">
+  <div class="panel panel-wide combat-panel">
+    <div class="combat-header">
+      <h2>전투</h2>
+      <span id="combat-round" class="combat-round"></span>
+      <button id="btn-open-ingame-menu-combat" class="btn btn-link btn-small ingame-menu-trigger">☰ 방 관리</button>
+    </div>
+
+    <div class="combat-field">
+      <div>
+        <div class="combat-side-label">적</div>
+        <div id="combat-enemies" class="combat-side"></div>
+      </div>
+      <div>
+        <div class="combat-side-label">파티</div>
+        <div id="combat-allies" class="combat-side"></div>
+      </div>
+    </div>
+
+    <div id="combat-log" class="combat-log"></div>
+
+    <p id="combat-turn-banner" class="combat-turn-banner"></p>
+
+    <div id="combat-target-picker" class="combat-target-picker hidden"></div>
+
+    <div id="combat-actions" class="combat-actions hidden">
+      <button id="btn-combat-attack" class="btn btn-primary">공격</button>
+      <button id="btn-combat-skill" class="btn">스킬 사용</button>
+      <button id="btn-combat-defend" class="btn">방어</button>
+    </div>
+
+    <div id="combat-result" class="combat-result hidden">
+      <p id="combat-result-text"></p>
+      <button id="btn-combat-leave" class="btn btn-primary">마을로 돌아가기</button>
+    </div>
+  </div>
+</section>
+
+<!-- 엔딩 -->
+<section id="screen-ending" class="screen hidden">
+  <div class="panel">
+    <h1 class="title">여정의 끝</h1>
+    <p class="ending-text">드래곤 킹을 물리치고, 마침내 여정을 완수했습니다.<br />당신의 이름은 이 세계에 오래도록 남을 것입니다.</p>
+    <button id="btn-ending-main-menu" class="btn btn-primary">메인 메뉴로</button>
+  </div>
+</section>
+
 <script src="data.js"></script>
+<script src="dice.js"></script>
+<script src="data/skills.js"></script>
+<script src="data/enemies.js"></script>
+<script src="data/story/town-a.js"></script>
+<script src="data/story/town-b.js"></script>
+<script src="data/story/town-c.js"></script>
+<script src="data/story/town-d.js"></script>
+<script src="data/story/town-e.js"></script>
+<script src="combat.js"></script>
+<script src="story.js"></script>
+<script src="progression.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

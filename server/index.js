@@ -11,6 +11,8 @@
 //     { type:'join_room', roomId, password, playerName }
 //     { type:'start_game' }                      // 방장만 유효
 //     { type:'action', payload:{...} }            // 방 전체(자신 포함)로 그대로 릴레이됨
+//     { type:'kick_player', targetId }            // 방장만 유효
+//     { type:'rename_room', title }               // 방장만 유효
 //     { type:'leave_room' }
 //   서버 -> 클라이언트
 //     { type:'room_list', rooms:[...] }
@@ -19,6 +21,8 @@
 //     { type:'join_fail', reason }
 //     { type:'players', players }
 //     { type:'room_closed', reason }
+//     { type:'kicked', reason }                   // 추방된 본인에게만 전송
+//     { type:'room_renamed', title }
 //     그 외 action.payload 는 type 그대로 방 전체에 브로드캐스트된다 (예: game_start, job_selected, town_enter)
 
 const http = require('http');
@@ -152,6 +156,29 @@ wss.on('connection', (ws) => {
         const room = rooms.get(roomId);
         if (!room || !playerId || !msg.payload || typeof msg.payload.type !== 'string') return;
         broadcastRoom(room, { ...msg.payload, senderId: playerId });
+        break;
+      }
+
+      case 'kick_player': {
+        const room = rooms.get(roomId);
+        if (!room || playerId !== room.hostId) return;
+        const targetId = msg.targetId;
+        if (!targetId || targetId === room.hostId) return;
+        const target = room.players.get(targetId);
+        if (!target) return;
+        send(target.ws, { type: 'kicked', reason: '호스트가 당신을 강퇴했습니다.' });
+        try { target.ws.close(); } catch { /* ignore */ }
+        removePlayer(room, targetId);
+        break;
+      }
+
+      case 'rename_room': {
+        const room = rooms.get(roomId);
+        if (!room || playerId !== room.hostId) return;
+        const title = (msg.title || '').toString().slice(0, 40).trim();
+        if (!title) return;
+        room.title = title;
+        broadcastRoom(room, { type: 'room_renamed', title: room.title });
         break;
       }
 
