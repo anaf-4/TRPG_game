@@ -71,19 +71,29 @@ jobs:
 
       # 서명된 정식 릴리스를 만들려면 저장소 Settings > Secrets and variables > Actions에
       # 아래 4개를 등록해야 한다 (없으면 서명 없이 빌드되어 기기에 바로 설치는 안 됨):
-      #   ANDROID_KEYSTORE_BASE64  — `certutil -encode android\app\release.keystore keystore.b64`
-      #                              (헤더/푸터 줄 제거 후) 로 만든 base64 문자열
+      #   ANDROID_KEYSTORE_BASE64  — release.keystore 파일을 base64로 인코딩한 문자열
       #   ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+      #
+      # if: 조건에서는 secrets 컨텍스트를 직접 쓸 수 없어서(워크플로우 파싱 자체가
+      # 깨진다) env로 한 번 옮겨받은 뒤 셸 스크립트 안에서 빈 값인지 확인한다.
       - name: Restore release keystore from secrets
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
-          cat > android/keystore.properties <<EOF
-          storeFile=release.keystore
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          EOF
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "ANDROID_KEYSTORE_BASE64 secret not set — building an unsigned release APK."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          {
+            echo "storeFile=release.keystore"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > android/keystore.properties
 
       - name: Build release APK
         working-directory: android
