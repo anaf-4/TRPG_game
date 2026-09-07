@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">용을 쫓는 자들</string>
+    <string name="title_activity_main">용을 쫓는 자들</string>
+    <string name="package_name">com.anaf4.trpgdragonchronicle</string>
+    <string name="custom_url_scheme">com.anaf4.trpgdragonchronicle</string>
+</resources>

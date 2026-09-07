@@ -1,6 +1,6 @@
 {
   "name": "trpg-dragon-chronicle",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TRPG: 용을 쫓는 자들 - Electron 기반 싱글/멀티 TRPG",
   "main": "main.js",
   "private": true,
@@ -14,6 +14,9 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.2.2",
+    "@capacitor/cli": "^6.2.2",
+    "@capacitor/core": "^6.2.2",
     "electron": "^32.0.0",
     "electron-builder": "^25.1.8"
   },

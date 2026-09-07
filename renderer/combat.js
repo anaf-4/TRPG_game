@@ -54,6 +54,24 @@
     return combatant.statuses.some((s) => s.type === 'status' && s.status === name);
   }
 
+  // DnD식 "국룰" 1D100 판정 — 치명타가 뜨면 곧바로 d100을 한 번 더 굴려서 등급을 가른다.
+  // 1~50 정통 치명타(x2), 51~90 급소 치명타(x2.5), 91~100 필살(x3).
+  // UI는 result.critRoll/critTier를 보고 d100 굴림 애니메이션 + 등급 텍스트를 보여준다.
+  function rollCritDamage(baseDamage, isCrit) {
+    if (!isCrit) return { damage: baseDamage, critRoll: null, critTier: null };
+    const critRoll = Dice.rollDie(100);
+    let multiplier = 2;
+    let critTier = 'solid';
+    if (critRoll >= 91) {
+      multiplier = 3;
+      critTier = 'critical';
+    } else if (critRoll >= 51) {
+      multiplier = 2.5;
+      critTier = 'severe';
+    }
+    return { damage: Math.round(baseDamage * multiplier), critRoll, critTier };
+  }
+
   function applyEffectToCombatant(combatant, eff) {
     if (!combatant || !eff) return;
     combatant.statuses.push({ ...eff, roundsRemaining: eff.duration });
@@ -150,13 +168,15 @@
           ? { roll: Dice.rollDie(20), hit: true, crit: false, fumble: false }
           : Dice.rollAttack(atkStat + bonus, getEffectiveStat(target, 'def'));
 
-        const result = { targetId, roll: attackResult.roll, hit: attackResult.hit, crit: attackResult.crit, damage: 0, appliedStatuses: [], executed: false };
+        const result = { targetId, roll: attackResult.roll, hit: attackResult.hit, crit: attackResult.crit, damage: 0, critRoll: null, critTier: null, appliedStatuses: [], executed: false };
 
         if (attackResult.hit) {
           const dmgRoll = Dice.rollDice(skillDef.damage.dice);
-          let damage = dmgRoll.total + atkStat;
-          if (attackResult.crit) damage *= 2;
-          result.damage = Math.max(1, damage);
+          const baseDamage = dmgRoll.total + atkStat;
+          const critResult = rollCritDamage(baseDamage, attackResult.crit);
+          result.damage = Math.max(1, critResult.damage);
+          result.critRoll = critResult.critRoll;
+          result.critTier = critResult.critTier;
 
           // bonus_vs_tag는 execute 임계치 판정에 영향을 주므로 먼저 적용한다.
           (skillDef.effects || []).forEach((eff) => {
@@ -195,12 +215,13 @@
 
       for (let i = 0; i < hits; i++) {
         const attackResult = Dice.rollAttack(atkStat, getEffectiveStat(target, 'def'));
-        const result = { targetId, roll: attackResult.roll, hit: attackResult.hit, crit: attackResult.crit, damage: 0, appliedStatuses: [], executed: false };
+        const result = { targetId, roll: attackResult.roll, hit: attackResult.hit, crit: attackResult.crit, damage: 0, critRoll: null, critTier: null, appliedStatuses: [], executed: false };
         if (attackResult.hit) {
           const dmgRoll = Dice.rollDice(skillDef.damage.dice);
-          let damage = dmgRoll.total + atkStat;
-          if (attackResult.crit) damage *= 2;
-          result.damage = Math.max(1, damage);
+          const critResult = rollCritDamage(dmgRoll.total + atkStat, attackResult.crit);
+          result.damage = Math.max(1, critResult.damage);
+          result.critRoll = critResult.critRoll;
+          result.critTier = critResult.critTier;
         }
         evt.results.push(result);
       }
@@ -217,12 +238,13 @@
       targetIds.forEach((targetId) => {
         const target = combatState.combatants[targetId];
         const attackResult = Dice.rollAttack(atkStat, getEffectiveStat(target, 'def'));
-        const result = { targetId, roll: attackResult.roll, hit: attackResult.hit, crit: attackResult.crit, damage: 0, appliedStatuses: [], executed: false };
+        const result = { targetId, roll: attackResult.roll, hit: attackResult.hit, crit: attackResult.crit, damage: 0, critRoll: null, critTier: null, appliedStatuses: [], executed: false };
         if (attackResult.hit) {
           const dmgRoll = Dice.rollDice(skillDef.damage.dice);
-          let damage = dmgRoll.total + atkStat;
-          if (attackResult.crit) damage *= 2;
-          result.damage = Math.max(1, damage);
+          const critResult = rollCritDamage(dmgRoll.total + atkStat, attackResult.crit);
+          result.damage = Math.max(1, critResult.damage);
+          result.critRoll = critResult.critRoll;
+          result.critTier = critResult.critTier;
         }
         evt.results.push(result);
       });

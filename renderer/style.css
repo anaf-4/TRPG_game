@@ -369,7 +369,70 @@ input[type="text"]:focus, input[type="password"]:focus {
   min-height: 160px;
 }
 
-.combat-panel { width: 900px; max-width: 94vw; }
+.combat-panel { width: 900px; max-width: 94vw; position: relative; }
+
+.dice-roll-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 8, 14, 0.55);
+  border-radius: 14px;
+  z-index: 40;
+}
+
+.dice-roll-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 22px 32px;
+  background: linear-gradient(180deg, var(--bg-1), var(--bg-0));
+  border: 2px solid var(--gold);
+  border-radius: 14px;
+  box-shadow: 0 0 30px rgba(230, 200, 119, 0.25);
+}
+
+.dice-roll-label { font-size: 12px; color: var(--gold-soft); letter-spacing: 0.04em; }
+
+.dice-roll-value {
+  font-size: 44px;
+  font-weight: 700;
+  color: var(--text-0);
+  min-width: 70px;
+  text-align: center;
+}
+
+.dice-roll-box.spinning .dice-roll-value {
+  animation: dice-spin 0.09s linear infinite;
+  color: var(--gold-soft);
+}
+
+.dice-roll-box.landed {
+  animation: dice-land 0.35s ease;
+}
+
+@keyframes dice-spin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(8deg) scale(1.05); }
+  100% { transform: rotate(-8deg) scale(1); }
+}
+
+@keyframes dice-land {
+  0% { transform: scale(1.35); }
+  60% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.party-gold {
+  font-size: 12px;
+  color: var(--gold-soft);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
 
 .combat-header { display: flex; align-items: center; justify-content: space-between; }
 .combat-round { color: var(--text-1); font-size: 12px; }

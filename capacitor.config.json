@@ -1,0 +1,8 @@
+{
+  "appId": "com.anaf4.trpgdragonchronicle",
+  "appName": "용을 쫓는 자들",
+  "webDir": "renderer",
+  "server": {
+    "androidScheme": "https"
+  }
+}

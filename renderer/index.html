@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:;" />
 <title>TRPG: 용을 쫓는 자들</title>
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -166,6 +166,7 @@
     <div class="town-header">
       <h2 id="town-name">마을A</h2>
       <span id="town-subtitle" class="town-subtitle"></span>
+      <span id="party-gold" class="party-gold">💰 0G</span>
       <button id="btn-open-ingame-menu-town" class="btn btn-link btn-small ingame-menu-trigger">☰ 방 관리</button>
     </div>
     <p id="town-description" class="town-desc"></p>
@@ -200,6 +201,13 @@
       <h2>전투</h2>
       <span id="combat-round" class="combat-round"></span>
       <button id="btn-open-ingame-menu-combat" class="btn btn-link btn-small ingame-menu-trigger">☰ 방 관리</button>
+    </div>
+
+    <div id="dice-roll-overlay" class="dice-roll-overlay hidden">
+      <div id="dice-roll-box" class="dice-roll-box">
+        <div id="dice-roll-label" class="dice-roll-label"></div>
+        <div id="dice-roll-value" class="dice-roll-value">?</div>
+      </div>
     </div>
 
     <div class="combat-field">
@@ -241,6 +249,7 @@
   </div>
 </section>
 
+<script src="net-browser.js"></script>
 <script src="data.js"></script>
 <script src="dice.js"></script>
 <script src="data/skills.js"></script>

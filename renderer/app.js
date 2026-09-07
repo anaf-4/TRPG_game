@@ -20,7 +20,7 @@
     combat: null, // combat.js의 combatState, 전투 중이 아니면 null
     combatActionPending: false, // 내 행동을 보냈지만 아직 combat_action_resolved가 안 돌아온 상태(중복 클릭 방지)
     combatMeta: null, // {zoneId, townId, isBossZone} — 현재 전투가 어느 마을/구역에서 시작됐는지
-    party: { currentTownId: 'townA', flags: new Set() }, // 파티 공용 진행 상태(마을 클리어 플래그 등)
+    party: { currentTownId: 'townA', flags: new Set(), gold: 0 }, // 파티 공용 진행 상태(마을 클리어 플래그, 골드 등)
     dialogue: null, // {npc, nodeId} — NPC 대화 세션(로컬 UI 상태, broadcast 안 함)
     tierUpOffer: null, // 나에게 뜬 전직 제안(다음 직업 id) 또는 null
   };
@@ -68,7 +68,7 @@
       'lobby-title', 'lobby-players', 'lobby-host-controls', 'btn-start-game', 'lobby-wait-text', 'btn-leave-lobby',
       'btn-rename-room', 'rename-room-row', 'input-rename-room', 'btn-rename-confirm', 'btn-rename-cancel',
       'job-grid', 'job-wait-text',
-      'town-name', 'town-subtitle', 'town-description', 'party-bar', 'location-grid', 'location-detail', 'btn-leave-town',
+      'town-name', 'town-subtitle', 'town-description', 'party-bar', 'party-gold', 'location-grid', 'location-detail', 'btn-leave-town',
       'tier-up-banner', 'tier-up-text', 'btn-tier-up-confirm',
       'travel-banner', 'travel-text', 'btn-travel-confirm',
       'modal-dialogue', 'dialogue-npc-name', 'dialogue-text', 'dialogue-options', 'btn-dialogue-close',
@@ -78,6 +78,7 @@
       'btn-ingame-menu-close', 'btn-ingame-menu-leave',
       'btn-open-ingame-menu-town', 'btn-open-ingame-menu-combat',
       'combat-round', 'combat-enemies', 'combat-allies', 'combat-log', 'combat-turn-banner',
+      'dice-roll-overlay', 'dice-roll-box', 'dice-roll-label', 'dice-roll-value',
       'combat-target-picker', 'combat-actions', 'btn-combat-attack', 'btn-combat-skill', 'btn-combat-defend',
       'combat-result', 'combat-result-text', 'btn-combat-leave',
     ].forEach((id) => { els[id] = q(id); });
@@ -131,7 +132,7 @@
     state.combat = null;
     state.combatActionPending = false;
     state.combatMeta = null;
-    state.party = { currentTownId: 'townA', flags: new Set() };
+    state.party = { currentTownId: 'townA', flags: new Set(), gold: 0 };
     state.dialogue = null;
     state.tierUpOffer = null;
     showScreen('screen-main');
@@ -646,6 +647,7 @@
       chip.textContent = `${p.name}${p.id === state.localId ? '(나)' : ''} · ${job ? job.name : '직업 미정'}`;
       bar.appendChild(chip);
     });
+    els['party-gold'].textContent = `💰 ${state.party.gold || 0}G`;
   }
 
   function initTown() {
@@ -757,6 +759,85 @@
       def: Math.round(PLAYER_BASE_STATS.def * mult),
       spd: PLAYER_BASE_STATS.spd,
     });
+  }
+
+  // 전투 승리 시 1D100으로 전리품 등급을 가른다 — DnD의 "국룰" 판정을 보상 쪽에도 적용.
+  const LOOT_TABLE = [
+    { max: 50, gold: [10, 30], text: '소량의 골드를 주웠다.' },
+    { max: 80, gold: [40, 80], text: '쓸만한 전리품을 챙겼다.' },
+    { max: 95, gold: [90, 150], text: '풍족한 보상을 발견했다!' },
+    { max: 100, gold: [200, 300], text: '희귀한 보물을 발견했다!!' },
+  ];
+  function rollLoot() {
+    const roll = Dice.rollDie(100);
+    const tier = LOOT_TABLE.find((t) => roll <= t.max);
+    const [lo, hi] = tier.gold;
+    const gold = lo + Math.floor(Math.random() * (hi - lo + 1));
+    return { roll, gold, text: tier.text };
+  }
+
+  // ---------- 주사위 굴러가는 애니메이션 ----------
+  // 결과는 이미 host/solo가 확정한 값이라, 여기서는 그 값을 향해 숫자가 빠르게
+  // 순환하다 멈추는 "연출"만 담당한다(게임 로직에는 영향 없음). 여러 굴림이
+  // 겹치면(치명타 -> D100 등) 순서대로 큐에 쌓아서 하나씩 보여준다.
+  const diceQueue = [];
+  let diceAnimating = false;
+
+  function queueDiceRoll(sides, finalValue, label) {
+    if (finalValue == null) return;
+    diceQueue.push({ sides, finalValue, label });
+    if (!diceAnimating) processDiceQueue();
+  }
+
+  function processDiceQueue() {
+    const next = diceQueue.shift();
+    if (!next) {
+      diceAnimating = false;
+      els['dice-roll-overlay'].classList.add('hidden');
+      return;
+    }
+    diceAnimating = true;
+    showDiceRoll(next.sides, next.finalValue, next.label, processDiceQueue);
+  }
+
+  function showDiceRoll(sides, finalValue, label, onDone) {
+    const overlay = els['dice-roll-overlay'];
+    const box = els['dice-roll-box'];
+    const valueEl = els['dice-roll-value'];
+    els['dice-roll-label'].textContent = label || `D${sides}`;
+    overlay.classList.remove('hidden');
+    box.classList.add('spinning');
+
+    const spinStart = Date.now();
+    const spinDuration = 550;
+    const spinTimer = setInterval(() => {
+      valueEl.textContent = String(1 + Math.floor(Math.random() * sides));
+      if (Date.now() - spinStart >= spinDuration) {
+        clearInterval(spinTimer);
+        valueEl.textContent = String(finalValue);
+        box.classList.remove('spinning');
+        box.classList.add('landed');
+        setTimeout(() => {
+          box.classList.remove('landed');
+          onDone();
+        }, 550);
+      }
+    }, 45);
+  }
+
+  // combat_action_resolved 이벤트 하나에서 대표 굴림(D20 공격 판정)과, 있다면
+  // 치명타 등급 판정(D100)까지 순서대로 애니메이션 큐에 넣는다.
+  function animateCombatActionDice(evt) {
+    const actor = state.combat && state.combat.combatants[evt.actorId];
+    const actorName = actor ? actor.name : '누군가';
+    const first = (evt.results || [])[0];
+    if (!first || first.roll == null) return;
+
+    queueDiceRoll(20, first.roll, `${actorName}의 판정 (D20)`);
+    if (first.critRoll != null) {
+      const tierLabel = first.critTier === 'critical' ? '필살!' : first.critTier === 'severe' ? '급소 치명타!' : '치명타!';
+      queueDiceRoll(100, first.critRoll, `${tierLabel} 등급 판정 (D100)`);
+    }
   }
 
   function resolveSkillDefById(skillId) {
@@ -882,7 +963,14 @@
     if (!state.combat || state.combat.status !== 'active') return;
     const end = CombatEngine.checkCombatEnd(state.combat);
     if (end) {
-      window.gameNet.sendAction({ type: 'combat_end', result: end });
+      const endEvt = { type: 'combat_end', result: end };
+      if (end === 'victory') {
+        const loot = rollLoot();
+        endEvt.lootRoll = loot.roll;
+        endEvt.lootGold = loot.gold;
+        endEvt.logText = `전투에서 승리했다! ${loot.text} (+${loot.gold}G)`;
+      }
+      window.gameNet.sendAction(endEvt);
       if (end === 'victory' && state.combatMeta && state.combatMeta.isBossZone) {
         window.gameNet.sendAction({ type: 'boss_defeated', townId: state.combatMeta.townId, zoneId: state.combatMeta.zoneId });
       }
@@ -973,6 +1061,7 @@
         state.combat = CombatEngine.applyCombatEvent(state.combat, evt);
         state.combatActionPending = false;
         renderCombat();
+        animateCombatActionDice(evt);
         hostCheckEndOrAdvance();
       } else if (evt.type === 'combat_turn_advance') {
         state.combat = CombatEngine.applyCombatEvent(state.combat, evt);
@@ -981,6 +1070,10 @@
         hostDriveCombat();
       } else if (evt.type === 'combat_end') {
         state.combat = CombatEngine.applyCombatEvent(state.combat, evt);
+        if (evt.result === 'victory' && typeof evt.lootGold === 'number') {
+          state.party.gold = (state.party.gold || 0) + evt.lootGold;
+          queueDiceRoll(100, evt.lootRoll, '전리품 판정 (D100)');
+        }
         renderCombat();
       } else if (evt.type === 'combat_intent') {
         // 호스트/솔로만 실제로 주사위를 굴려서 결과를 확정한다 (권위자 패턴).
