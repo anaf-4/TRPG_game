@@ -1,0 +1,18 @@
+{
+  "name": "trpg-dragon-chronicle",
+  "version": "0.1.0",
+  "description": "TRPG: 용을 쫓는 자들 - Electron 기반 싱글/멀티 TRPG",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0"
+  }
+}

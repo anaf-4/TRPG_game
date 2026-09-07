@@ -1,0 +1,16 @@
+{
+  "name": "trpg-relay-server",
+  "version": "0.1.0",
+  "description": "TRPG: 용을 쫓는 자들 - 인터넷 멀티플레이용 중계 서버",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
