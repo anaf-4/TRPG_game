@@ -1,4 +1,4 @@
-name: Build Windows & Android Apps
+name: "Build Windows & Android Apps"
 
 on:
   push:
